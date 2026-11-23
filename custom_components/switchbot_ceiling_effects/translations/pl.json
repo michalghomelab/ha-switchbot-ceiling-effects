@@ -30,6 +30,7 @@
       "effect": {
         "name": "Efekt",
         "state": {
+          "off": "Wyłączony",
           "romance": "Romance",
           "vitality": "Vitality",
           "heartthrob": "Heartthrob",
@@ -60,9 +61,6 @@
       }
     },
     "number": {
-      "effect_speed": {
-        "name": "Prędkość efektu"
-      },
       "effect_brightness": {
         "name": "Jasność efektu"
       }

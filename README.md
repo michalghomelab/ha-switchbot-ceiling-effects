@@ -5,8 +5,7 @@ Home Assistant custom integration that adds the controls missing from Matter for
 
 | Entity | What it does | API command |
 | --- | --- | --- |
-| `select.<lamp>_effect` | starts one of the 26 preset effects from the app | `setLightEffect` |
-| `number.<lamp>_effect_speed` | effect speed, 1–255 | `setEffectSpeedMode` |
+| `select.<lamp>_effect` | starts one of the 26 preset effects from the app and turns the main white light off; `off` turns the color light off | `setLightEffect`, `turnOffMainLight`, `turnOffColorLight` |
 | `number.<lamp>_effect_brightness` | color light brightness, 1–100 % | `setColorLightBrightness` |
 
 Everything else (on/off, main light brightness, color temperature, state) stays with the
@@ -15,12 +14,14 @@ through the SwitchBot Cloud API v1.1: no polling, no webhooks, no MQTT.
 
 ## Caveats
 
-- **Write-only.** The API does not report the running effect or its speed, so the entities
+- **Write-only.** The API does not report the running effect, so the entities
   show the last value sent from Home Assistant (restored after a restart). Changes made in
   the SwitchBot app are not reflected.
-- **Speed is undocumented for this model.** `setEffectSpeedMode` is documented only for
-  RGBICWW Light Bars. If the cloud rejects it for the ceiling light, the slider raises an
-  error such as `command not supported by this device (statusCode 160)`.
+- **No effect speed.** The cloud API rejects `setEffectSpeedMode` for this model
+  (`statusCode 160`, tested on firmware V0.8) and silently drops a `speed` field passed to
+  `setLightEffect`. Speed is only reachable over Bluetooth.
+- **Starting an effect turns the main white light off**, otherwise it drowns the effect out.
+  Turn it back on through Matter.
 - Needs internet; commands take about a second. Every command counts towards the
   10,000 calls/day API limit.
 
@@ -46,7 +47,7 @@ data:
   option: sunrise
 ```
 
-Effect keys: `romance`, `vitality`, `heartthrob`, `party`, `dynamic`, `mystery`,
+Options: `off`, `romance`, `vitality`, `heartthrob`, `party`, `dynamic`, `mystery`,
 `lightning`, `rock`, `starlight`, `valentines_day`, `dream`, `alarm`, `fireworks`, `waves`,
 `christmas`, `rainbow`, `game`, `halloween`, `meditation`, `starlit_sky`, `sleep`, `film`,
 `sunrise`, `sunset`, `new_year`, `cherry_blossom`.

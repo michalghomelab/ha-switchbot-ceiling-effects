@@ -6,6 +6,8 @@ CONF_SECRET = "secret"  # noqa: S105
 
 DEVICE_TYPE = "RGBICWW Ceiling Light"
 
+EFFECT_OFF = "off"
+
 # Index in this list is the API effectId (0-25), see
 # https://github.com/OpenWonderLabs/SwitchBotAPI/blob/main/devices/lighting/rgbicww-ceiling-light.md
 EFFECTS = [
