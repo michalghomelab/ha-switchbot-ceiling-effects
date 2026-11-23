@@ -49,8 +49,7 @@ class EffectSelect(CeilingEffectsEntity, SelectEntity, RestoreEntity):
             await self._send("turnOffColorLight", "default")
         else:
             # setLightEffect turns the color light on by itself. The main white
-            # light drowns the effect out, so switch it off.
+            # light is left alone on purpose: it is controlled through Matter.
             await self._send("setLightEffect", {"effectId": EFFECTS.index(option)})
-            await self._send("turnOffMainLight", "default")
         self._attr_current_option = option
         self.async_write_ha_state()

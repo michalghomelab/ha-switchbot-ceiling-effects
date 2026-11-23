@@ -5,7 +5,7 @@ Home Assistant custom integration that adds the controls missing from Matter for
 
 | Entity | What it does | API command |
 | --- | --- | --- |
-| `select.<lamp>_effect` | starts one of the 26 preset effects from the app and turns the main white light off; `off` turns the color light off | `setLightEffect`, `turnOffMainLight`, `turnOffColorLight` |
+| `select.<lamp>_effect` | starts one of the 26 preset effects on the color light; `off` turns the color light off | `setLightEffect`, `turnOffColorLight` |
 | `number.<lamp>_effect_brightness` | color light brightness, 1–100 % | `setColorLightBrightness` |
 
 Everything else (on/off, main light brightness, color temperature, state) stays with the
@@ -20,8 +20,9 @@ through the SwitchBot Cloud API v1.1: no polling, no webhooks, no MQTT.
 - **No effect speed.** The cloud API rejects `setEffectSpeedMode` for this model
   (`statusCode 160`, tested on firmware V0.8) and silently drops a `speed` field passed to
   `setLightEffect`. Speed is only reachable over Bluetooth.
-- **Starting an effect turns the main white light off**, otherwise it drowns the effect out.
-  Turn it back on through Matter.
+- **The main white light is never touched.** Its brightness and color temperature stay with
+  Matter. At high white brightness the effect is hard to see, so dim or turn off the white
+  light yourself when you want the effect to stand out.
 - Needs internet; commands take about a second. Every command counts towards the
   10,000 calls/day API limit.
 
