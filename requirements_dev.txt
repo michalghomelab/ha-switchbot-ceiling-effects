@@ -1,0 +1,3 @@
+aiohttp
+pytest
+ruff==0.16.7

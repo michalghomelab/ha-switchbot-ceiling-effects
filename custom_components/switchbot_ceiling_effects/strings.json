@@ -1,0 +1,71 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SwitchBot API",
+        "description": "Token and secret from the SwitchBot app: Profile → Preferences → tap App Version 10 times → Developer Options.",
+        "data": {
+          "token": "Token",
+          "secret": "Secret"
+        }
+      },
+      "device": {
+        "title": "Choose the lamp",
+        "data": {
+          "device_id": "Lamp"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid token or secret.",
+      "cannot_connect": "Cannot reach the SwitchBot API."
+    },
+    "abort": {
+      "no_devices": "No unconfigured RGBICWW Ceiling Light on this account.",
+      "already_configured": "This lamp is already configured."
+    }
+  },
+  "entity": {
+    "select": {
+      "effect": {
+        "name": "Effect",
+        "state": {
+          "romance": "Romance",
+          "vitality": "Vitality",
+          "heartthrob": "Heartthrob",
+          "party": "Party",
+          "dynamic": "Dynamic",
+          "mystery": "Mystery",
+          "lightning": "Lightning",
+          "rock": "Rock",
+          "starlight": "Starlight",
+          "valentines_day": "Valentine's Day",
+          "dream": "Dream",
+          "alarm": "Alarm",
+          "fireworks": "Fireworks",
+          "waves": "Waves",
+          "christmas": "Christmas",
+          "rainbow": "Rainbow",
+          "game": "Game",
+          "halloween": "Halloween",
+          "meditation": "Meditation",
+          "starlit_sky": "Starlit Sky",
+          "sleep": "Sleep",
+          "film": "Film",
+          "sunrise": "Sunrise",
+          "sunset": "Sunset",
+          "new_year": "New Year",
+          "cherry_blossom": "Cherry Blossom"
+        }
+      }
+    },
+    "number": {
+      "effect_speed": {
+        "name": "Effect speed"
+      },
+      "effect_brightness": {
+        "name": "Effect brightness"
+      }
+    }
+  }
+}

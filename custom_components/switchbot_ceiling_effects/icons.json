@@ -1,0 +1,17 @@
+{
+  "entity": {
+    "select": {
+      "effect": {
+        "default": "mdi:auto-fix"
+      }
+    },
+    "number": {
+      "effect_speed": {
+        "default": "mdi:speedometer"
+      },
+      "effect_brightness": {
+        "default": "mdi:brightness-6"
+      }
+    }
+  }
+}

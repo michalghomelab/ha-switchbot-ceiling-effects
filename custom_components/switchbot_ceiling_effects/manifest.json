@@ -1,0 +1,14 @@
+{
+  "domain": "switchbot_ceiling_effects",
+  "name": "SwitchBot Ceiling Effects",
+  "codeowners": [
+    "@michalg-"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/michalghomelab/ha-switchbot-ceiling-effects",
+  "integration_type": "device",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/michalghomelab/ha-switchbot-ceiling-effects/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
