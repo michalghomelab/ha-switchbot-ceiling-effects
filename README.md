@@ -6,10 +6,13 @@ the main white light through the same account.
 
 | Entity | What it does |
 | --- | --- |
-| `select.<lamp>_effect` | starts one of the effects saved in your SwitchBot account (the presets and the ones you made in the app); `off` turns the color light off |
-| `number.<lamp>_effect_speed` | effect speed, 1–100 % (same scale as the SwitchBot app) |
-| `number.<lamp>_effect_brightness` | color light brightness, 1–100 % |
+| `light.<lamp>_color_light` | the color light: on/off, brightness, color, and the effects saved in your SwitchBot account (the presets and the ones you made in the app) |
 | `light.<lamp>_white_light` | main white light: on/off, brightness, color temperature 2700–6500 K |
+| `number.<lamp>_effect_speed` | effect speed, 1–100 % (same scale as the SwitchBot app) |
+
+The effects are a light's own effect list, so they sit in the light's dialog next to the
+brightness and the color, where Home Assistant puts them for every light. The speed has
+no place there, so it is a separate slider; put it next to the light on a card.
 
 **Commands go out over Bluetooth** when the lamp is in range of a Bluetooth adapter or
 an ESPHome proxy: local, instant, no cloud. The cloud takes over automatically when the
@@ -58,11 +61,10 @@ The cloud API is undocumented and may change with a SwitchBot app update.
 
 ## Caveats
 
-- **Two values are not reported by the lamp:** the effect speed, and which effect is
-  running. The speed slider shows what was last sent (restored after a restart), and the
-  effect selector shows the running effect only when Home Assistant started it. An effect
-  started in the SwitchBot app makes it `unknown`; the lamp only says that *some* effect
-  is running.
+- **Three things the lamp does not report:** the effect speed, which effect is running,
+  and the color while an effect runs. The speed slider shows what was last sent
+  (restored after a restart), and the light shows an effect name only when Home
+  Assistant started it; the lamp only says that *some* effect is running.
 - **Effects never touch the white light.** Turning the effect off sends "keep" for the
   white light and "off" for the color light, and the white light entity sends "keep"
   for the color light.

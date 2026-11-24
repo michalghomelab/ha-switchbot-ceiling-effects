@@ -77,6 +77,7 @@ class LampState:
     white_kelvin: int | None = None
     color_on: bool | None = None
     color_brightness: int | None = None  # 1-100 %
+    color_rgb: tuple[int, int, int] | None = None
     effect_running: bool | None = None
 
 
@@ -89,7 +90,7 @@ def state_from_advertisement(data: dict[str, Any], props: Properties) -> LampSta
     and `cw` is the white light's color temperature.
     """
     mode = data.get("color_mode")
-    return LampState(
+    return LampState(  # broadcasts carry no color, so `color_rgb` stays unknown
         white_on=data.get("main_isOn"),
         white_brightness=data.get("main_brightness"),
         white_kelvin=data.get("cw"),
@@ -374,6 +375,7 @@ class Lamp:
             props.white_kelvin,
             props.color_power,
             props.color_brightness,
+            props.color_rgb,
             props.color_mode,
         ]
         values = await self.account.get_properties(self.mac, ids)
@@ -386,6 +388,14 @@ class Lamp:
             value = values.get(prop)
             return int(value) if isinstance(value, (int, float)) else None
 
+        def rgb(prop: int) -> tuple[int, int, int] | None:
+            """Read a color; the cloud writes it as "red:green:blue"."""
+            parts = str(values.get(prop) or "").split(":")
+            if len(parts) != 3 or not all(part.isdigit() for part in parts):  # noqa: PLR2004
+                return None
+            red, green, blue = (int(part) for part in parts)
+            return red, green, blue
+
         mode = number(props.color_mode)
         return LampState(
             white_on=flag(props.white_power),
@@ -393,6 +403,7 @@ class Lamp:
             white_kelvin=number(props.white_kelvin),
             color_on=flag(props.color_power),
             color_brightness=number(props.color_brightness),
+            color_rgb=rgb(props.color_rgb),
             effect_running=None if mode is None else mode == props.effect_mode,
         )
 
@@ -478,13 +489,28 @@ class Lamp:
                 [ble.white_color_temp.format(kelvin)] if ble else None,
             )
 
-    async def turn_off_color_light(self) -> None:
-        """Turn the color light off and leave the main white light as it is."""
+    async def set_color_rgb(self, red: int, green: int, blue: int) -> None:
+        """Set a plain color on the color light, which ends any effect."""
         ble = self.model.ble
         await self._send(
+            self.model.set_color_rgb,
+            {"0": red, "1": green, "2": blue},
+            [ble.color_rgb.format(red, green, blue)] if ble else None,
+        )
+
+    async def switch_color_light(self, *, on: bool) -> None:
+        """Switch the color light, leaving the main white light as it is."""
+        ble = self.model.ble
+        params = self.model.color_on_params if on else self.model.color_off_params
+        state = BLE_ON if on else BLE_OFF
+        await self._send(
             self.model.set_power,
-            self.model.color_off_params,
-            [ble.power.format(power_byte(white=BLE_KEEP, color=BLE_OFF))]
+            params,
+            [ble.power.format(power_byte(white=BLE_KEEP, color=state))]
             if ble
             else None,
         )
+
+    async def turn_off_color_light(self) -> None:
+        """Turn the color light off and leave the main white light as it is."""
+        await self.switch_color_light(on=False)

@@ -1,4 +1,4 @@
-"""Color light brightness and effect speed."""
+"""Effect speed, which no light entity can carry."""
 
 from __future__ import annotations
 
@@ -33,8 +33,8 @@ async def async_setup_entry(
     entry: CeilingEffectsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Add the brightness and speed sliders."""
-    async_add_entities([EffectBrightness(entry), EffectSpeed(entry)])
+    """Add the speed slider."""
+    async_add_entities([EffectSpeed(entry)])
 
 
 class CeilingNumber(CeilingEffectsEntity, NumberEntity):
@@ -45,23 +45,6 @@ class CeilingNumber(CeilingEffectsEntity, NumberEntity):
     _attr_native_step = 1
     _attr_native_unit_of_measurement = PERCENTAGE
     _attr_mode = NumberMode.SLIDER
-
-
-class EffectBrightness(CeilingNumber):
-    """Brightness of the color light, as the lamp reports it."""
-
-    def __init__(self, entry: CeilingEffectsConfigEntry) -> None:
-        """Initialize the slider."""
-        super().__init__(entry, "effect_brightness")
-
-    @property
-    def native_value(self) -> float | None:
-        """Brightness the lamp reports."""
-        return self.coordinator.data.color_brightness
-
-    async def async_set_native_value(self, value: float) -> None:
-        """Send the brightness to the lamp."""
-        await self._run("brightness", self._lamp.set_color_brightness(int(value)))
 
 
 class EffectSpeed(CeilingNumber, RestoreNumber):

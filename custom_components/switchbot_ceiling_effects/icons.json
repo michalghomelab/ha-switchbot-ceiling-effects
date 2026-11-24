@@ -1,21 +1,16 @@
 {
   "entity": {
-    "select": {
-      "effect": {
+    "light": {
+      "white_light": {
+        "default": "mdi:ceiling-light"
+      },
+      "color_light": {
         "default": "mdi:auto-fix"
       }
     },
     "number": {
-      "effect_brightness": {
-        "default": "mdi:brightness-6"
-      },
       "effect_speed": {
         "default": "mdi:speedometer"
-      }
-    },
-    "light": {
-      "white_light": {
-        "default": "mdi:ceiling-light"
       }
     }
   }

@@ -31,6 +31,7 @@ class BleProfile:
     white_brightness_color_temp: str
     # One effect packet: style low byte, (style high << 4 | color count), packet
     # index, then up to `colors_per_packet` RGB triplets.
+    color_rgb: str
     effect_packet: str
     effect_speed: str
     colors_per_packet: int = 3
@@ -62,6 +63,7 @@ class Properties:
     white_kelvin: int
     color_power: int
     color_brightness: int
+    color_rgb: int
     color_mode: int
     # Value of `color_mode` that means an effect is running.
     effect_mode: int
@@ -96,8 +98,10 @@ class LampModel:
     set_effect: int  # params {"0": style, "1": color count, "2": "r:g:b+r:g:b"}
     set_speed: int  # params {"0": speed}
     set_brightness: int  # params {"0": brightness 1-100}
+    set_color_rgb: int  # params {"0": red, "1": green, "2": blue}
     set_power: int  # params below
-    # Parameters for `set_power` that turn the color light off and nothing else.
+    # Parameters for `set_power` that switch the color light only.
+    color_on_params: dict[str, Any] = field(default_factory=dict)
     color_off_params: dict[str, Any] = field(default_factory=dict)
     speed_min: int = 1
     speed_max: int = 255
@@ -119,7 +123,9 @@ CEILING_LIGHT_2 = LampModel(
     set_effect=10310,  # setColorLightEffectColors
     set_speed=10309,  # setColorLightEffectSpeed
     set_brightness=10306,  # setColorLightBrightness
+    set_color_rgb=10307,  # setColorLightColors
     set_power=10301,  # setWhiteAndColorSwitch: per light 0 keep, 1 on, 2 off
+    color_on_params={"0": 0, "1": 1, "2": 1},
     color_off_params={"0": 0, "1": 2, "2": 1},
     white=WhiteLight(
         set_brightness=10302,  # setWhiteBrightness
@@ -137,6 +143,7 @@ CEILING_LIGHT_2 = LampModel(
         white_kelvin=10303,
         color_power=10301,
         color_brightness=10304,
+        color_rgb=10306,
         color_mode=10305,
         effect_mode=7,  # 2 is a plain color
     ),
@@ -147,6 +154,7 @@ CEILING_LIGHT_2 = LampModel(
         white_brightness="570F490109{:02X}",
         white_color_temp="570F490110{:04X}",
         white_brightness_color_temp="570F490111{:02X}{:04X}",
+        color_rgb="570F490116{:02X}{:02X}{:02X}00FF",
         effect_packet="570F490D01{:02X}{:02X}{:02X}{}",
         effect_speed="570F490D03{:02X}",
     ),

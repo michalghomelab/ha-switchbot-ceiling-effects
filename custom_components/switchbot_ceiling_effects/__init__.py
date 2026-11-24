@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SELECT]
+PLATFORMS = [Platform.LIGHT, Platform.NUMBER]
 
 type CeilingEffectsConfigEntry = ConfigEntry[CeilingCoordinator]
 

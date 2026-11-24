@@ -56,6 +56,8 @@ class CeilingCoordinator(DataUpdateCoordinator[LampState]):
         # running, so both are what this integration last sent.
         self.speed = lamp.model.default_speed
         self.effect_name: str | None = None
+        # Broadcasts carry no color, so the last known one is kept here.
+        self.color_rgb: tuple[int, int, int] | None = None
         self._last_broadcast = 0.0
 
     @property
@@ -80,11 +82,14 @@ class CeilingCoordinator(DataUpdateCoordinator[LampState]):
         if self.broadcasts_arriving and self.data is not None:
             return self.data
         try:
-            return await self.lamp.get_state()
+            state = await self.lamp.get_state()
         except SwitchBotAuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except SwitchBotApiError as err:
             raise UpdateFailed(str(err)) from err
+        if state.color_rgb is not None:
+            self.color_rgb = state.color_rgb
+        return state
 
     async def async_refresh_soon(self) -> None:
         """

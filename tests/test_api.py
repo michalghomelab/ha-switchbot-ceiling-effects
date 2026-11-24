@@ -263,6 +263,7 @@ def test_model_without_white_light_refuses() -> None:
         set_effect=1,
         set_speed=2,
         set_brightness=3,
+        set_color_rgb=5,
         set_power=4,
     )
     account, session = account_with({})
@@ -280,6 +281,7 @@ SHADOW_OK = {
         "10302": {"id": 10302, "value": 83},
         "10303": {"id": 10303, "value": 3984},
         "10304": {"id": 10304, "value": 100},
+        "10306": {"id": 10306, "value": "163:229:255"},
         "10305": {"id": 10305, "value": 7},
     },
 }
@@ -294,11 +296,20 @@ def test_get_state_reads_what_the_lamp_reports() -> None:
         white_kelvin=3984,
         color_on=False,
         color_brightness=100,
+        color_rgb=(163, 229, 255),
         effect_running=True,
     )
     request = session.calls[-1]["json"]
     assert request["deviceID"] == "AA11BB22CC33"
-    assert sorted(request["propertyIDs"]) == [10300, 10301, 10302, 10303, 10304, 10305]
+    assert sorted(request["propertyIDs"]) == [
+        10300,
+        10301,
+        10302,
+        10303,
+        10304,
+        10305,
+        10306,
+    ]
     assert "requestID" not in request
 
 
@@ -322,6 +333,7 @@ def test_get_state_without_properties_is_empty() -> None:
         set_effect=1,
         set_speed=2,
         set_brightness=3,
+        set_color_rgb=5,
         set_power=4,
     )
     account, session = account_with({})
