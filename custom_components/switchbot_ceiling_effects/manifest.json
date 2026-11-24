@@ -5,15 +5,15 @@
     "@michalg-"
   ],
   "config_flow": true,
+  "dependencies": [
+    "bluetooth_adapters"
+  ],
   "documentation": "https://github.com/michalghomelab/ha-switchbot-ceiling-effects",
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/michalghomelab/ha-switchbot-ceiling-effects/issues",
   "requirements": [
-    "PySwitchbot>=3.15.1"
+    "PySwitchbot>=3.1.0"
   ],
-  "version": "0.1.0",
-  "dependencies": [
-    "bluetooth_adapters"
-  ]
+  "version": "0.1.0"
 }
