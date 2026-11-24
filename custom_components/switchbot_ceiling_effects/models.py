@@ -1,0 +1,51 @@
+"""
+Supported lamp models.
+
+Each SwitchBot model is one `LampModel`: which device type it is and which
+"thing model" services of the SwitchBot app API control it. Adding a lamp means
+adding one entry to `MODELS`; see docs/adding-a-lamp.md for how to find the values.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass(frozen=True)
+class LampModel:
+    """How to control one SwitchBot lamp model through the app API."""
+
+    # `device_detail.device_type` from wonder/device/v3/getdevice, e.g. "W1162000".
+    device_type: str
+    # Model name shown in Home Assistant.
+    name: str
+    # `action` for wonder/devicestatus/v1/userExternal that lists the account's
+    # preset and custom effects.
+    effect_list_action: str
+    # Service IDs for command/cmd/api/v1/func/invoke.
+    set_effect: int  # params {"0": style, "1": color count, "2": "r:g:b+r:g:b"}
+    set_speed: int  # params {"0": speed}
+    set_brightness: int  # params {"0": brightness 1-100}
+    set_power: int  # params below
+    # Parameters for `set_power` that turn the color light off and nothing else.
+    color_off_params: dict[str, Any] = field(default_factory=dict)
+    speed_min: int = 1
+    speed_max: int = 255
+    # Speed the SwitchBot app uses before the user changes it.
+    default_speed: int = 153
+
+
+# RGBICWW Ceiling Light ("ceilingLight2" in the app, panel plugin CeilingLight2).
+CEILING_LIGHT_2 = LampModel(
+    device_type="W1162000",
+    name="RGBICWW Ceiling Light",
+    effect_list_action="getColorfulEffect",
+    set_effect=10310,  # setColorLightEffectColors
+    set_speed=10309,  # setColorLightEffectSpeed
+    set_brightness=10306,  # setColorLightBrightness
+    set_power=10301,  # setWhiteAndColorSwitch: per light 0 keep, 1 on, 2 off
+    color_off_params={"0": 0, "1": 2, "2": 1},
+)
+
+MODELS: dict[str, LampModel] = {m.device_type: m for m in (CEILING_LIGHT_2,)}

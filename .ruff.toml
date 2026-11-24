@@ -29,3 +29,4 @@ max-complexity = 25
 
 [lint.per-file-ignores]
 "tests/**" = ["D", "S101", "INP001"]
+"tools/**" = ["D103", "T201", "S310", "PTH123", "PLR2004", "INP001"]

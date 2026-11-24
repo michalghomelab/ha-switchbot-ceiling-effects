@@ -8,6 +8,9 @@
     "number": {
       "effect_brightness": {
         "default": "mdi:brightness-6"
+      },
+      "effect_speed": {
+        "default": "mdi:speedometer"
       }
     }
   }

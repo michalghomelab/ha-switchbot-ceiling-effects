@@ -15,4 +15,9 @@ coverage.xml
 
 # Home Assistant configuration
 config/*
-!config/configuration.yaml.venv
+!config/configuration.yaml
+
+# local
+.venv
+.sbapp_session.json
+

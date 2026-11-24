@@ -2,42 +2,46 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from homeassistant.const import CONF_DEVICE_ID, CONF_NAME
+from homeassistant.const import CONF_NAME
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
 from .api import SwitchBotApiError
-from .const import DEVICE_TYPE, DOMAIN
+from .const import DOMAIN
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
     from . import CeilingEffectsConfigEntry
 
 
 class CeilingEffectsEntity(Entity):
-    """Write-only entity: the API does not report the active effect or speed."""
+    """Write-only entity: values are what Home Assistant last sent."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False
 
     def __init__(self, entry: CeilingEffectsConfigEntry, key: str) -> None:
         """Set up identifiers shared by all entities of one lamp."""
-        self._api = entry.runtime_data
-        self._device_id: str = entry.data[CONF_DEVICE_ID]
-        self._attr_unique_id = f"{self._device_id}_{key}"
+        self._data = entry.runtime_data
+        self._lamp = self._data.lamp
+        mac = self._lamp.mac
+        self._attr_unique_id = f"{mac}_{key}"
         self._attr_translation_key = key
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self._device_id)},
+            identifiers={(DOMAIN, mac)},
             name=entry.data[CONF_NAME],
             manufacturer="SwitchBot",
-            model=DEVICE_TYPE,
+            model=self._lamp.model.name,
         )
 
-    async def _send(self, command: str, parameter: Any) -> None:
+    async def _run(self, action: str, call: Awaitable[None]) -> None:
+        """Await an API call and turn its errors into a readable HA error."""
         try:
-            await self._api.send_command(self._device_id, command, parameter)
+            await call
         except SwitchBotApiError as err:
-            msg = f"SwitchBot {command} failed: {err}"
+            msg = f"SwitchBot {action} failed: {err}"
             raise HomeAssistantError(msg) from err

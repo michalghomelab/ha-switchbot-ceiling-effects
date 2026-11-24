@@ -2,11 +2,11 @@
   "config": {
     "step": {
       "user": {
-        "title": "SwitchBot API",
-        "description": "Token i secret z aplikacji SwitchBot: Profil → Preferencje → 10× stuknij w wersję aplikacji → Opcje deweloperskie.",
+        "title": "Konto SwitchBot",
+        "description": "E-mail i hasło konta z aplikacji SwitchBot. Integracja używa tego samego API co aplikacja, bo publiczne API nie obsługuje prędkości efektów.",
         "data": {
-          "token": "Token",
-          "secret": "Secret"
+          "email": "E-mail",
+          "password": "Hasło"
         }
       },
       "device": {
@@ -14,15 +14,23 @@
         "data": {
           "device_id": "Lampa"
         }
+      },
+      "reauth_confirm": {
+        "title": "Zaloguj się ponownie",
+        "description": "SwitchBot odrzucił hasło dla {email}. Podaj aktualne hasło.",
+        "data": {
+          "password": "Hasło"
+        }
       }
     },
     "error": {
-      "invalid_auth": "Nieprawidłowy token lub secret.",
-      "cannot_connect": "Brak połączenia z API SwitchBota."
+      "invalid_auth": "Nieprawidłowy e-mail lub hasło.",
+      "cannot_connect": "Brak połączenia z SwitchBotem."
     },
     "abort": {
       "no_devices": "Na koncie nie ma nieskonfigurowanej lampy RGBICWW Ceiling Light.",
-      "already_configured": "Ta lampa jest już skonfigurowana."
+      "already_configured": "Ta lampa jest już skonfigurowana.",
+      "reauth_successful": "Zalogowano ponownie."
     }
   },
   "entity": {
@@ -30,39 +38,16 @@
       "effect": {
         "name": "Efekt",
         "state": {
-          "off": "Wyłączony",
-          "romance": "Romance",
-          "vitality": "Vitality",
-          "heartthrob": "Heartthrob",
-          "party": "Party",
-          "dynamic": "Dynamic",
-          "mystery": "Mystery",
-          "lightning": "Lightning",
-          "rock": "Rock",
-          "starlight": "Starlight",
-          "valentines_day": "Valentine's Day",
-          "dream": "Dream",
-          "alarm": "Alarm",
-          "fireworks": "Fireworks",
-          "waves": "Waves",
-          "christmas": "Christmas",
-          "rainbow": "Rainbow",
-          "game": "Game",
-          "halloween": "Halloween",
-          "meditation": "Meditation",
-          "starlit_sky": "Starlit Sky",
-          "sleep": "Sleep",
-          "film": "Film",
-          "sunrise": "Sunrise",
-          "sunset": "Sunset",
-          "new_year": "New Year",
-          "cherry_blossom": "Cherry Blossom"
+          "off": "Wyłączony"
         }
       }
     },
     "number": {
       "effect_brightness": {
         "name": "Jasność efektu"
+      },
+      "effect_speed": {
+        "name": "Prędkość efektu"
       }
     }
   }
