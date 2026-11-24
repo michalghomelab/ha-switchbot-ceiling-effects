@@ -407,3 +407,27 @@ def test_start_effect_sends_colors_then_speed_over_bluetooth() -> None:
     lamp, ble, _ = ble_lamp()
     asyncio.run(lamp.start_effect(api.Effect("Dream", 14, (0xA3E5FF,)), 250))
     assert ble.sent == [["570F490D010E0100A3E5FF"], ["570F490D03FA"]]
+
+
+def test_state_from_a_bluetooth_broadcast() -> None:
+    """The lamp's own broadcast carries both sub-lights."""
+    props = models.CEILING_LIGHT_2.properties
+    state = api.state_from_advertisement(
+        {
+            "isOn": True,
+            "brightness": 55,
+            "color_mode": 7,
+            "cw": 3984,
+            "main_isOn": False,
+            "main_brightness": 2,
+        },
+        props,
+    )
+    assert state == api.LampState(
+        white_on=False,
+        white_brightness=2,
+        white_kelvin=3984,
+        color_on=True,
+        color_brightness=55,
+        effect_running=True,
+    )

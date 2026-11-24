@@ -11,17 +11,22 @@ import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.components import bluetooth
+from homeassistant.core import callback
 from switchbot import SwitchbotModel
+from switchbot.adv_parser import parse_advertisement_data
 from switchbot.devices.light_strip import SwitchbotRgbicwwCeilingLight
 
-from .api import SwitchBotBleError
+from .api import SwitchBotBleError, state_from_advertisement
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from bleak.backends.device import BLEDevice
     from homeassistant.core import HomeAssistant
     from switchbot.devices.device import SwitchbotEncryptedDevice
 
-    from .models import BleProfile
+    from .api import LampState
+    from .models import BleProfile, Properties
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +65,32 @@ class BleBackend:
     def available(self) -> bool:
         """Whether the lamp is in range right now."""
         return self._device_class is not None and self._ble_device() is not None
+
+    def listen(
+        self, props: Properties, on_state: Callable[[LampState], None]
+    ) -> Callable[[], None]:
+        """Report the lamp state from its broadcasts; returns an unsubscribe."""
+
+        @callback
+        def _advertisement(
+            service_info: bluetooth.BluetoothServiceInfoBleak,
+            change: bluetooth.BluetoothChange,  # noqa: ARG001
+        ) -> None:
+            parsed = parse_advertisement_data(
+                service_info.device,
+                service_info.advertisement,
+                SwitchbotModel[self._profile.model],
+            )
+            data = (parsed.data.get("data") if parsed else None) or {}
+            if data:
+                on_state(state_from_advertisement(data, props))
+
+        return bluetooth.async_register_callback(
+            self._hass,
+            _advertisement,
+            bluetooth.BluetoothCallbackMatcher(address=self._address),
+            bluetooth.BluetoothScanningMode.PASSIVE,
+        )
 
     async def send(self, commands: list[str]) -> None:
         """Send hex commands in order; raise so the cloud can take over."""

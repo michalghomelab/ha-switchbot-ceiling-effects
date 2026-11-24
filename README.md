@@ -15,9 +15,14 @@ the main white light through the same account.
 an ESPHome proxy: local, instant, no cloud. The cloud takes over automatically when the
 lamp is out of range.
 
-The lamp reports its state to the SwitchBot cloud, and this integration reads it back
-every 30 seconds and right after each command. Changes made anywhere, in the SwitchBot
-app, over Matter or with a wall switch, show up in Home Assistant.
+**The state comes from the lamp's own Bluetooth broadcasts**, so it updates within
+seconds and without the cloud: both sub-lights, their brightness, the white light's
+color temperature and whether an effect is running. While broadcasts arrive, the cloud
+is not asked at all; out of range the integration falls back to reading the state the
+lamp reports to the cloud, every 30 seconds and right after each command.
+
+Either way, changes made anywhere, in the SwitchBot app, over Matter or with a wall
+switch, show up in Home Assistant.
 
 The white light is also available over Matter, which is local and updates instantly.
 Use whichever you prefer; the cloud entity is handy when the lamp is not paired over
@@ -44,7 +49,7 @@ API:
   (effect colors `10310`, speed `10309`, brightness `10306`, power `10301`,
   white brightness `10302`, color temperature `10303`, both `10304`),
 - the state from `device/device/v1/shadow/getByIDs` (white `10300`/`10302`/`10303`,
-  color light `10301`/`10304`/`10305`),
+  color light `10301`/`10304`/`10305`), only while the lamp is out of Bluetooth range,
 - the effect list from `wonder/devicestatus/v1/userExternal`.
 
 The cloud API is undocumented and may change with a SwitchBot app update.
@@ -65,7 +70,7 @@ The cloud API is undocumented and may change with a SwitchBot app update.
   of the core SwitchBot integration. If it changes, Home Assistant asks for the new one.
   Accounts that sign in with Apple or Google need a password set in the SwitchBot app.
 - **Without Bluetooth in range** everything still works, but each command needs
-  internet and takes about a second.
+  internet and takes about a second, and the state is polled from the cloud.
 - The effect list is read when the integration starts. Reload it after adding an
   effect in the app.
 

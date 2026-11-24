@@ -45,6 +45,8 @@ async def async_setup_entry(
         raise ConfigEntryNotReady(str(err)) from err
 
     coordinator = CeilingCoordinator(hass, entry, lamp, effects)
+    if ble is not None:
+        entry.async_on_unload(coordinator.listen_to_broadcasts(ble))
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 

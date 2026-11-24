@@ -19,7 +19,7 @@ import aiohttp
 from .models import BLE_KEEP, BLE_OFF, BLE_ON, power_byte
 
 if TYPE_CHECKING:
-    from .models import BleProfile, LampModel
+    from .models import BleProfile, LampModel, Properties
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,6 +78,25 @@ class LampState:
     color_on: bool | None = None
     color_brightness: int | None = None  # 1-100 %
     effect_running: bool | None = None
+
+
+def state_from_advertisement(data: dict[str, Any], props: Properties) -> LampState:
+    """
+    Turn one parsed advertisement into the lamp state.
+
+    pySwitchbot names these fields the same way for every light: the color
+    sub-light is `isOn`/`brightness`/`color_mode`, the white one `main_*`,
+    and `cw` is the white light's color temperature.
+    """
+    mode = data.get("color_mode")
+    return LampState(
+        white_on=data.get("main_isOn"),
+        white_brightness=data.get("main_brightness"),
+        white_kelvin=data.get("cw"),
+        color_on=data.get("isOn"),
+        color_brightness=data.get("brightness"),
+        effect_running=None if mode is None else mode == props.effect_mode,
+    )
 
 
 @dataclass(frozen=True)
