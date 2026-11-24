@@ -14,6 +14,7 @@ Standard library only. See docs/adding-a-lamp.md for the full walkthrough.
 
 The session token (not the password) is saved to .sbapp_session.json in the
 current directory, readable only by you. It expires after about two hours.
+Set SBAPP_SESSION to keep it somewhere else.
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ from typing import Any
 CLIENT_ID = "5nnwmhmsa9xxskm14hd85lm9bm"
 ACCOUNT = "https://account.api.switchbot.net/account/api/v1/user"
 PUBLISH = "https://publish.api.switchbot.net/publishplatform/api/v1/rn/plugin"
-SESSION = ".sbapp_session.json"
+SESSION = os.environ.get("SBAPP_SESSION", ".sbapp_session.json")
 # The plugin list depends on the app version; use a recent one.
 APP_VERSION = "10.11"
 
