@@ -49,6 +49,11 @@
       "effect_speed": {
         "name": "Effect speed"
       }
+    },
+    "light": {
+      "white_light": {
+        "name": "White light"
+      }
     }
   }
 }

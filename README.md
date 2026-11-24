@@ -1,16 +1,19 @@
 # SwitchBot Ceiling Effects
 
 Home Assistant custom integration that adds the controls missing from Matter for the
-**SwitchBot RGBICWW Ceiling Light**: effects, effect speed and effect brightness.
+**SwitchBot RGBICWW Ceiling Light**: effects, effect speed and effect brightness, plus
+the main white light through the same account.
 
 | Entity | What it does |
 | --- | --- |
 | `select.<lamp>_effect` | starts one of the effects saved in your SwitchBot account (the presets and the ones you made in the app); `off` turns the color light off |
 | `number.<lamp>_effect_speed` | effect speed, 1–100 % (same scale as the SwitchBot app) |
 | `number.<lamp>_effect_brightness` | color light brightness, 1–100 % |
+| `light.<lamp>_white_light` | main white light: on/off, brightness, color temperature 2700–6500 K |
 
-Everything else (on/off, main light brightness, color temperature, state) stays with the
-Matter integration, which is local and real-time.
+The white light is also available over Matter, which is local and reports the real
+state. Use whichever you prefer; the cloud entity is handy when the lamp is not paired
+over Matter or you want everything in one device.
 
 ## How it works
 
@@ -21,7 +24,8 @@ app**, the same calls the app's lamp screen makes:
 
 - login with your SwitchBot account e-mail and password,
 - `command/cmd/api/v1/func/invoke` with the lamp's "thing model" services
-  (effect colors `10310`, speed `10309`, brightness `10306`, power `10301`),
+  (effect colors `10310`, speed `10309`, brightness `10306`, power `10301`,
+  white brightness `10302`, color temperature `10303`, both `10304`),
 - the effect list from `wonder/devicestatus/v1/userExternal`.
 
 The API is undocumented and may change with a SwitchBot app update.
@@ -30,9 +34,11 @@ The API is undocumented and may change with a SwitchBot app update.
 
 - **Write-only.** The entities show the last value sent from Home Assistant (restored
   after a restart). Changes made in the SwitchBot app are not reflected.
-- **The main white light is never touched.** Turning the effect off sends "keep" for the
-  white light and "off" for the color light. At high white brightness the effect is hard
-  to see, so dim or turn off the white light yourself when you want it to stand out.
+- **Effects never touch the white light.** Turning the effect off sends "keep" for the
+  white light and "off" for the color light, and the white light entity sends "keep"
+  for the color light.
+- **The white light state is assumed.** The cloud does not report it reliably (it misses
+  changes made over Matter), so the entity shows what Home Assistant last sent.
 - **Account password.** It is stored in the config entry, like the encryption-key login
   of the core SwitchBot integration. If it changes, Home Assistant asks for the new one.
   Accounts that sign in with Apple or Google need a password set in the SwitchBot app.

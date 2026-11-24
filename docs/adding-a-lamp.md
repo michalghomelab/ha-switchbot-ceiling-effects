@@ -22,6 +22,7 @@ lamp needs a control the ceiling light doesn't have.
 | `set_effect`, `set_speed`, `set_brightness`, `set_power` | service IDs (`PMLightService` or similar) in the panel plugin |
 | `color_off_params` | how the panel calls the power service for the color light only |
 | `speed_min`, `speed_max`, `default_speed` | the speed slider in the panel plugin (`min`, `max`, default value) |
+| `white` (optional `WhiteLight`) | white brightness / color temperature services, power parameters for the white light only, and the Kelvin range (Matter reports it, if the lamp has Matter) |
 
 ## 1. Log in and find the device type
 

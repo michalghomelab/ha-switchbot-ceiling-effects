@@ -12,6 +12,11 @@
       "effect_speed": {
         "default": "mdi:speedometer"
       }
+    },
+    "light": {
+      "white_light": {
+        "default": "mdi:ceiling-light"
+      }
     }
   }
 }

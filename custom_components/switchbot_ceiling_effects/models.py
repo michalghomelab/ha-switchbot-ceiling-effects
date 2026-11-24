@@ -13,6 +13,20 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class WhiteLight:
+    """Services of a lamp's main white light."""
+
+    set_brightness: int  # params {"0": brightness 1-100}
+    set_color_temp: int  # params {"0": kelvin}
+    set_brightness_color_temp: int  # params {"0": brightness, "1": kelvin}
+    # Parameters for the model's `set_power` service.
+    on_params: dict[str, Any]
+    off_params: dict[str, Any]
+    min_kelvin: int
+    max_kelvin: int
+
+
+@dataclass(frozen=True)
 class LampModel:
     """How to control one SwitchBot lamp model through the app API."""
 
@@ -34,6 +48,8 @@ class LampModel:
     speed_max: int = 255
     # Speed the SwitchBot app uses before the user changes it.
     default_speed: int = 153
+    # Main white light; leave `white` as None for lamps without one.
+    white: WhiteLight | None = None
 
 
 # RGBICWW Ceiling Light ("ceilingLight2" in the app, panel plugin CeilingLight2).
@@ -46,6 +62,16 @@ CEILING_LIGHT_2 = LampModel(
     set_brightness=10306,  # setColorLightBrightness
     set_power=10301,  # setWhiteAndColorSwitch: per light 0 keep, 1 on, 2 off
     color_off_params={"0": 0, "1": 2, "2": 1},
+    white=WhiteLight(
+        set_brightness=10302,  # setWhiteBrightness
+        set_color_temp=10303,  # setWhiteColorTemp
+        set_brightness_color_temp=10304,  # setWhiteBrightnessColorTemp
+        on_params={"0": 1, "1": 0, "2": 1},
+        off_params={"0": 2, "1": 0, "2": 1},
+        # Matter reports 2702-6535 K for this lamp.
+        min_kelvin=2700,
+        max_kelvin=6500,
+    ),
 )
 
 MODELS: dict[str, LampModel] = {m.device_type: m for m in (CEILING_LIGHT_2,)}

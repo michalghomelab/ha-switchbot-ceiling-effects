@@ -49,6 +49,11 @@
       "effect_speed": {
         "name": "Prędkość efektu"
       }
+    },
+    "light": {
+      "white_light": {
+        "name": "Światło białe"
+      }
     }
   }
 }

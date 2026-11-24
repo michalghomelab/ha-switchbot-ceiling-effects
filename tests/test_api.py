@@ -215,3 +215,51 @@ def test_models_are_keyed_by_device_type() -> None:
     for device_type, model in models.MODELS.items():
         assert model.device_type == device_type
         assert model.speed_min <= model.default_speed <= model.speed_max
+
+
+def invokes(session: FakeSession) -> list[tuple[int, dict[str, Any]]]:
+    return [
+        (c["json"]["functionID"], c["json"]["params"])
+        for c in session.calls
+        if c["url"].endswith("func/invoke")
+    ]
+
+
+def test_white_on_with_brightness_and_temp_keeps_color_light() -> None:
+    lamp, session = lamp_with({"func/invoke": (200, INVOKE_OK)})
+    asyncio.run(lamp.set_white(on=True, brightness=40, kelvin=3000))
+    assert invokes(session) == [
+        (10301, {"0": 1, "1": 0, "2": 1}),  # white on, color light: keep
+        (10304, {"0": 40, "1": 3000}),
+    ]
+
+
+def test_white_single_values_use_single_services_and_clamp() -> None:
+    lamp, session = lamp_with({"func/invoke": (200, INVOKE_OK)})
+    asyncio.run(lamp.set_white(on=True, brightness=150))
+    asyncio.run(lamp.set_white(on=True, kelvin=9000))
+    assert invokes(session)[1] == (10302, {"0": 100})
+    assert invokes(session)[3] == (10303, {"0": 6500})
+
+
+def test_white_off_only_sends_power() -> None:
+    lamp, session = lamp_with({"func/invoke": (200, INVOKE_OK)})
+    asyncio.run(lamp.set_white(on=False, brightness=50))
+    assert invokes(session) == [(10301, {"0": 2, "1": 0, "2": 1})]
+
+
+def test_model_without_white_light_refuses() -> None:
+    model = models.LampModel(
+        device_type="X",
+        name="No white",
+        effect_list_action="a",
+        set_effect=1,
+        set_speed=2,
+        set_brightness=3,
+        set_power=4,
+    )
+    account, session = account_with({})
+    lamp = api.Lamp(account, model, "AA")
+    with pytest.raises(api.SwitchBotApiError, match="no white light"):
+        asyncio.run(lamp.set_white(on=True))
+    assert session.calls == []

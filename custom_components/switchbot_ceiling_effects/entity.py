@@ -1,4 +1,4 @@
-"""Base entity shared by the select and number platforms."""
+"""Base entity shared by all platforms."""
 
 from __future__ import annotations
 

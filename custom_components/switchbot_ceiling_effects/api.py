@@ -241,6 +241,37 @@ class Lamp:
             self.mac, self.model.set_brightness, {"0": brightness}
         )
 
+    async def set_white(
+        self,
+        *,
+        on: bool,
+        brightness: int | None = None,
+        kelvin: int | None = None,
+    ) -> None:
+        """Switch the main white light; when turning on, optionally set its look."""
+        white = self.model.white
+        if white is None:
+            msg = f"{self.model.name} has no white light"
+            raise SwitchBotApiError(msg)
+        if not on:
+            await self.account.invoke(self.mac, self.model.set_power, white.off_params)
+            return
+        await self.account.invoke(self.mac, self.model.set_power, white.on_params)
+        if brightness is not None:
+            brightness = max(1, min(100, brightness))
+        if kelvin is not None:
+            kelvin = max(white.min_kelvin, min(white.max_kelvin, kelvin))
+        if brightness is not None and kelvin is not None:
+            await self.account.invoke(
+                self.mac,
+                white.set_brightness_color_temp,
+                {"0": brightness, "1": kelvin},
+            )
+        elif brightness is not None:
+            await self.account.invoke(self.mac, white.set_brightness, {"0": brightness})
+        elif kelvin is not None:
+            await self.account.invoke(self.mac, white.set_color_temp, {"0": kelvin})
+
     async def turn_off_color_light(self) -> None:
         """Turn the color light off and leave the main white light as it is."""
         await self.account.invoke(

@@ -14,7 +14,7 @@ from .api import Effect, Lamp, SwitchBotAccount, SwitchBotApiError, SwitchBotAut
 from .const import CONF_DEVICE_TYPE, CONF_GROUP_ID
 from .models import MODELS
 
-PLATFORMS = [Platform.NUMBER, Platform.SELECT]
+PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SELECT]
 
 
 @dataclass
