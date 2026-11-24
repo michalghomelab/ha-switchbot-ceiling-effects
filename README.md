@@ -66,9 +66,11 @@ The cloud API is undocumented and may change with a SwitchBot app update.
   and the color while an effect runs. The speed slider shows what was last sent
   (restored after a restart), and the light shows an effect name only when Home
   Assistant started it; the lamp only says that *some* effect is running.
-- **Effects never touch the white light.** Turning the effect off sends "keep" for the
-  white light and "off" for the color light, and the white light entity sends "keep"
-  for the color light.
+- **The two lights stay out of each other's way.** Turning the effect off sends "keep"
+  for the white light and "off" for the color light, and the white light entity sends
+  "keep" for the color light. A white light that is already on is sent its new
+  brightness or color temperature on its own, without a power command: the lamp ends
+  the running effect whenever it is told to switch a light on.
 - **Account password.** It is stored in the config entry, like the encryption-key login
   of the core SwitchBot integration. If it changes, Home Assistant asks for the new one.
   Accounts that sign in with Apple or Google need a password set in the SwitchBot app.

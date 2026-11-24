@@ -82,7 +82,10 @@ class WhiteLight(CeilingEffectsEntity, LightEntity):
         await self._run(
             "white light",
             self._lamp.set_white(
-                on=True,
+                # Telling the lamp to switch a light on makes it drop the
+                # effect the color light is running, so a light that is
+                # already on is sent its new look and nothing else.
+                on=None if self.is_on else True,
                 brightness=None if brightness is None else to_percent(brightness),
                 kelvin=kwargs.get(ATTR_COLOR_TEMP_KELVIN),
             ),

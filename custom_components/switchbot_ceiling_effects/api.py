@@ -440,28 +440,35 @@ class Lamp:
     async def set_white(
         self,
         *,
-        on: bool,
+        on: bool | None,
         brightness: int | None = None,
         kelvin: int | None = None,
     ) -> None:
-        """Switch the main white light; when turning on, optionally set its look."""
+        """
+        Switch the main white light and optionally set its look.
+
+        `on=None` leaves the power alone and sets only the look, which is
+        what a light that is already on needs: the lamp drops whatever the
+        color light is doing when it is told to switch a light on.
+        """
         white = self.model.white
         if white is None:
             msg = f"{self.model.name} has no white light"
             raise SwitchBotApiError(msg)
         ble = self.model.ble
 
-        params = white.on_params if on else white.off_params
-        state = BLE_ON if on else BLE_OFF
-        await self._send(
-            self.model.set_power,
-            params,
-            [ble.power.format(power_byte(white=state, color=BLE_KEEP))]
-            if ble
-            else None,
-        )
-        if not on:
-            return
+        if on is not None:
+            params = white.on_params if on else white.off_params
+            state = BLE_ON if on else BLE_OFF
+            await self._send(
+                self.model.set_power,
+                params,
+                [ble.power.format(power_byte(white=state, color=BLE_KEEP))]
+                if ble
+                else None,
+            )
+            if not on:
+                return
 
         if brightness is not None:
             brightness = max(1, min(100, brightness))

@@ -268,6 +268,12 @@ def test_white_single_values_use_single_services_and_clamp() -> None:
     assert invokes(session)[3] == (10303, {"0": 6500})
 
 
+def test_white_without_a_power_change_only_sends_the_look() -> None:
+    lamp, session = lamp_with({"func/invoke": (200, INVOKE_OK)})
+    asyncio.run(lamp.set_white(on=None, brightness=40))
+    assert invokes(session) == [(10302, {"0": 40})]
+
+
 def test_white_off_only_sends_power() -> None:
     lamp, session = lamp_with({"func/invoke": (200, INVOKE_OK)})
     asyncio.run(lamp.set_white(on=False, brightness=50))
@@ -425,6 +431,13 @@ def test_white_over_bluetooth_keeps_the_color_light() -> None:
     asyncio.run(lamp.set_white(on=True, brightness=40, kelvin=3000))
     # 0x81: bit 7 says "literally", white on (1), color light kept (0).
     assert ble.sent == [["570F49010181"], ["570F490111280BB8"]]
+
+
+def test_white_brightness_over_bluetooth_leaves_the_power_alone() -> None:
+    lamp, ble, _ = ble_lamp()
+    asyncio.run(lamp.set_white(on=None, brightness=40))
+    # No power command: it would end the effect the color light is running.
+    assert ble.sent == [["570F49010928"]]
 
 
 def test_turn_off_color_light_over_bluetooth() -> None:
