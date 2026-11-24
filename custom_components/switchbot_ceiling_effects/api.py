@@ -134,6 +134,18 @@ def compact_mac(mac: str) -> str:
     return mac.replace(":", "").replace("-", "").upper()
 
 
+def ble_address(mac: str) -> str:
+    """
+    Return the MAC the way Home Assistant addresses Bluetooth devices.
+
+    The SwitchBot cloud gives it without separators (AC276E591656), Home
+    Assistant wants the usual colon form (AC:27:6E:59:16:56), and looking a
+    lamp up with the wrong one silently finds nothing.
+    """
+    clean = compact_mac(mac)
+    return ":".join(clean[index : index + 2] for index in range(0, len(clean), 2))
+
+
 class SwitchBotAccount:
     """Logs in with the SwitchBot account and calls the app API."""
 
@@ -331,13 +343,18 @@ class Lamp:
         self, service: int, params: dict[str, Any], ble: list[str] | None = None
     ) -> None:
         """Send one command over Bluetooth, falling back to the cloud."""
-        if ble and self.ble is not None and self.ble.available:
-            try:
-                await self.ble.send(ble)
-            except SwitchBotBleError as err:
-                _LOGGER.debug("Bluetooth failed (%s), using the cloud instead", err)
+        if ble and self.ble is not None:
+            if not self.ble.available:
+                _LOGGER.debug(
+                    "%s is not in Bluetooth range, using the cloud instead", self.mac
+                )
             else:
-                return
+                try:
+                    await self.ble.send(ble)
+                except SwitchBotBleError as err:
+                    _LOGGER.debug("Bluetooth failed (%s), using the cloud instead", err)
+                else:
+                    return
         await self.account.invoke(self.mac, service, params)
 
     async def get_effects(self, group_id: str) -> list[Effect]:

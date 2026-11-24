@@ -431,3 +431,10 @@ def test_state_from_a_bluetooth_broadcast() -> None:
         color_brightness=55,
         effect_running=True,
     )
+
+
+def test_addresses_for_the_cloud_and_for_bluetooth() -> None:
+    """The cloud wants the MAC without separators, Home Assistant with them."""
+    for written in ("AC276E591656", "ac:27:6e:59:16:56", "AC-27-6E-59-16-56"):
+        assert api.compact_mac(written) == "AC276E591656"
+        assert api.ble_address(written) == "AC:27:6E:59:16:56"

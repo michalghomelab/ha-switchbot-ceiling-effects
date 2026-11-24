@@ -16,7 +16,7 @@ from switchbot import SwitchbotModel
 from switchbot.adv_parser import parse_advertisement_data
 from switchbot.devices.light_strip import SwitchbotRgbicwwCeilingLight
 
-from .api import SwitchBotBleError, state_from_advertisement
+from .api import SwitchBotBleError, ble_address, state_from_advertisement
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -50,7 +50,7 @@ class BleBackend:
         """Remember how to reach the lamp; connect only when sending."""
         self._hass = hass
         self._profile = profile
-        self._address = mac.upper()
+        self._address = ble_address(mac)
         self._key_id = key_id
         self._encryption_key = encryption_key
         self._device_class = DEVICE_CLASSES.get(profile.model)
