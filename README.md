@@ -11,11 +11,9 @@ the main white light through the same account.
 | `number.<lamp>_effect_speed` | effect speed, 1–100 % (same scale as the SwitchBot app) |
 
 The effects are a light's own effect list, so they sit in the light's dialog next to the
-brightness and the color, where Home Assistant puts them for every light. The dialog has
-no speed control and the effect list is the only part of it an integration fills, so the
-list ends with `Speed 20%` … `Speed 100%`: picking one changes the speed of the running
-effect and leaves the light as it is. The slider is there for any exact value, and both
-always show the same speed.
+brightness and the color, where Home Assistant puts them for every light. That dialog
+has no speed control and no room for one, so the speed is a separate slider; put it next
+to the light on a card.
 
 **Commands go out over Bluetooth** when the lamp is in range of a Bluetooth adapter or
 an ESPHome proxy: local, instant, no cloud. The cloud takes over automatically when the
@@ -115,7 +113,7 @@ data:
 ```
 
 The effects are the ones from the SwitchBot app (e.g. `Romance`, `Dream`, `Rainbow`,
-`Sunset`, plus your own), and the speed is either `effect: Speed 40%` or the slider:
+`Sunset`, plus your own). The speed is its own entity:
 
 ```yaml
 action: number.set_value
