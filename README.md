@@ -74,6 +74,17 @@ The cloud API is undocumented and may change with a SwitchBot app update.
 - The effect list is read when the integration starts. Reload it after adding an
   effect in the app.
 
+## Bluetooth or the cloud?
+
+Home Assistant logs which one it used. Turn on debug logging for the integration
+(Settings → Devices & services → SwitchBot Ceiling Effects → ⋮ → Enable debug logging)
+and look for `Sent 1 command(s) ... over Bluetooth`. A line saying
+`Bluetooth failed ..., using the cloud instead` means the lamp was out of range or the
+connection dropped.
+
+A lamp added before version 0.3.0 has no Bluetooth key stored; the integration reads one
+on the next restart, so no need to add the lamp again.
+
 ## Installation
 
 1. HACS → ⋮ → Custom repositories → add
