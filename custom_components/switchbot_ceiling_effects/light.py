@@ -23,6 +23,13 @@ if TYPE_CHECKING:
     from . import CeilingEffectsConfigEntry
 
 
+# Home Assistant's light dialog has no speed control, and the effect list is
+# the only part of it an integration fills. These entries set the speed from
+# there; the number entity still sets any exact value.
+SPEED_STEPS = (20, 40, 60, 80, 100)
+SPEED_EFFECTS = {f"Speed {percent}%": percent for percent in SPEED_STEPS}
+
+
 def to_percent(brightness: int) -> int:
     """Convert Home Assistant brightness (0-255) to the lamp's 1-100 %."""
     return max(1, min(100, round(brightness / 255 * 100)))
@@ -100,6 +107,9 @@ class ColorLight(CeilingEffectsEntity, LightEntity):
     Home Assistant shows the effects in the light's own dialog, next to the
     brightness and the color. The lamp reports whether an effect is running,
     but not which one, so the name is the one this integration last sent.
+
+    The effect list ends with a few speeds, because the dialog holds nothing
+    else an integration can fill.
     """
 
     _attr_color_mode = ColorMode.RGB
@@ -109,7 +119,7 @@ class ColorLight(CeilingEffectsEntity, LightEntity):
     def __init__(self, entry: CeilingEffectsConfigEntry) -> None:
         """Initialize the light with the effects of this account."""
         super().__init__(entry, "color_light")
-        self._attr_effect_list = list(self.coordinator.effects)
+        self._attr_effect_list = [*self.coordinator.effects, *SPEED_EFFECTS]
 
     @property
     def is_on(self) -> bool | None:
@@ -134,10 +144,21 @@ class ColorLight(CeilingEffectsEntity, LightEntity):
             return None
         return self.coordinator.effect_name
 
+    async def async_set_speed(self, percent: int) -> None:
+        """Set the effect speed, leaving the light as it is."""
+        speed = self._lamp.model.speed_from_percent(percent)
+        await self._run("speed", self._lamp.set_speed(speed))
+        self.coordinator.speed = speed
+        self.coordinator.async_update_listeners()
+
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Start an effect, set a color or a brightness, or just switch on."""
+        """Start an effect, set a speed, a color or a brightness, or switch on."""
         brightness = kwargs.get(ATTR_BRIGHTNESS)
         percent = None if brightness is None else to_percent(brightness)
+
+        if (speed_percent := SPEED_EFFECTS.get(kwargs.get(ATTR_EFFECT))) is not None:
+            await self.async_set_speed(speed_percent)
+            return
 
         if (effect := kwargs.get(ATTR_EFFECT)) in self.coordinator.effects:
             await self._run(

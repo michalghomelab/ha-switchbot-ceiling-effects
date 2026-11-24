@@ -114,6 +114,15 @@ class LampModel:
     # Bluetooth commands; leave as None to always go through the cloud.
     ble: BleProfile | None = None
 
+    def speed_from_percent(self, percent: float) -> int:
+        """Convert a percentage to a speed inside the model's range."""
+        speed = round(percent / 100 * self.speed_max)
+        return max(self.speed_min, min(self.speed_max, speed))
+
+    def percent_from_speed(self, speed: int) -> int:
+        """Convert a speed to the percentage the SwitchBot app shows."""
+        return max(1, min(100, round(speed / self.speed_max * 100)))
+
 
 # RGBICWW Ceiling Light ("ceilingLight2" in the app, panel plugin CeilingLight2).
 CEILING_LIGHT_2 = LampModel(

@@ -224,6 +224,25 @@ def test_models_are_keyed_by_device_type() -> None:
         assert model.speed_min <= model.default_speed <= model.speed_max
 
 
+FULL_PERCENT = 100
+
+
+def test_speed_percentages_survive_a_round_trip() -> None:
+    model = models.CEILING_LIGHT_2
+    for percent in (20, 40, 60, 80, 100):
+        speed = model.speed_from_percent(percent)
+        assert model.speed_min <= speed <= model.speed_max
+        assert model.percent_from_speed(speed) == percent
+
+
+def test_speed_percentages_stay_within_the_models_range() -> None:
+    model = models.CEILING_LIGHT_2
+    assert model.speed_from_percent(0) == model.speed_min
+    assert model.speed_from_percent(200) == model.speed_max
+    assert model.percent_from_speed(0) == 1
+    assert model.percent_from_speed(model.speed_max) == FULL_PERCENT
+
+
 def invokes(session: FakeSession) -> list[tuple[int, dict[str, Any]]]:
     return [
         (c["json"]["functionID"], c["json"]["params"])

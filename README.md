@@ -11,8 +11,11 @@ the main white light through the same account.
 | `number.<lamp>_effect_speed` | effect speed, 1–100 % (same scale as the SwitchBot app) |
 
 The effects are a light's own effect list, so they sit in the light's dialog next to the
-brightness and the color, where Home Assistant puts them for every light. The speed has
-no place there, so it is a separate slider; put it next to the light on a card.
+brightness and the color, where Home Assistant puts them for every light. The dialog has
+no speed control and the effect list is the only part of it an integration fills, so the
+list ends with `Speed 20%` … `Speed 100%`: picking one changes the speed of the running
+effect and leaves the light as it is. The slider is there for any exact value, and both
+always show the same speed.
 
 **Commands go out over Bluetooth** when the lamp is in range of a Bluetooth adapter or
 an ESPHome proxy: local, instant, no cloud. The cloud takes over automatically when the
@@ -103,15 +106,24 @@ Manual install: copy `custom_components/switchbot_ceiling_effects` into your
 ## Example
 
 ```yaml
-action: select.select_option
+action: light.turn_on
 target:
-  entity_id: select.ceiling_light_effect
+  entity_id: light.ceiling_light_color_light
 data:
-  option: Sunset
+  effect: Sunset
+  brightness_pct: 40
 ```
 
-The options are the effect names from the SwitchBot app (e.g. `Romance`, `Dream`,
-`Rainbow`, `Sunset`, plus your own effects) and `off`.
+The effects are the ones from the SwitchBot app (e.g. `Romance`, `Dream`, `Rainbow`,
+`Sunset`, plus your own), and the speed is either `effect: Speed 40%` or the slider:
+
+```yaml
+action: number.set_value
+target:
+  entity_id: number.ceiling_light_effect_speed
+data:
+  value: 40
+```
 
 ## Supported lamps and adding more
 
