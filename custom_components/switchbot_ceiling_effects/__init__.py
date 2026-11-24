@@ -9,7 +9,8 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import Lamp, SwitchBotAccount, SwitchBotApiError, SwitchBotAuthError
-from .const import CONF_DEVICE_TYPE, CONF_GROUP_ID
+from .ble import BleBackend
+from .const import CONF_BLE_KEY, CONF_BLE_KEY_ID, CONF_DEVICE_TYPE, CONF_GROUP_ID
 from .coordinator import CeilingCoordinator
 from .models import MODELS
 
@@ -30,7 +31,12 @@ async def async_setup_entry(
     account = SwitchBotAccount(
         async_get_clientsession(hass), entry.data[CONF_EMAIL], entry.data[CONF_PASSWORD]
     )
-    lamp = Lamp(account, model, entry.data[CONF_DEVICE_ID])
+    mac = entry.data[CONF_DEVICE_ID]
+    ble = None
+    key_id, key = entry.data.get(CONF_BLE_KEY_ID), entry.data.get(CONF_BLE_KEY)
+    if model.ble is not None and key_id and key:
+        ble = BleBackend(hass, model.ble, mac, key_id, key)
+    lamp = Lamp(account, model, mac, ble)
     try:
         effects = await lamp.get_effects(entry.data[CONF_GROUP_ID])
     except SwitchBotAuthError as err:

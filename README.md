@@ -11,6 +11,10 @@ the main white light through the same account.
 | `number.<lamp>_effect_brightness` | color light brightness, 1–100 % |
 | `light.<lamp>_white_light` | main white light: on/off, brightness, color temperature 2700–6500 K |
 
+**Commands go out over Bluetooth** when the lamp is in range of a Bluetooth adapter or
+an ESPHome proxy: local, instant, no cloud. The cloud takes over automatically when the
+lamp is out of range.
+
 The lamp reports its state to the SwitchBot cloud, and this integration reads it back
 every 30 seconds and right after each command. Changes made anywhere, in the SwitchBot
 app, over Matter or with a wall switch, show up in Home Assistant.
@@ -23,8 +27,17 @@ Matter or you want everything in one device.
 
 The public SwitchBot Cloud API v1.1 can start effects but cannot set their speed
 (`setEffectSpeedMode` returns `statusCode 160` for this lamp), and most presets run at
-the maximum speed. This integration therefore uses the **private API of the SwitchBot
-app**, the same calls the app's lamp screen makes:
+the maximum speed. This integration therefore speaks to the lamp the way the SwitchBot
+app does.
+
+**Over Bluetooth** (preferred), through [pySwitchbot] and Home Assistant's Bluetooth
+stack, so any adapter or ESPHome proxy in range will do. The commands are the same
+bytes the app sends when your phone is next to the lamp, for example `570F490D03<speed>`
+for the effect speed. The lamp's Bluetooth key is read from your account once, when you
+add the lamp.
+
+**Through the cloud** when the lamp is out of Bluetooth range, using the app's private
+API:
 
 - login with your SwitchBot account e-mail and password,
 - `command/cmd/api/v1/func/invoke` with the lamp's "thing model" services
@@ -34,7 +47,9 @@ app**, the same calls the app's lamp screen makes:
   color light `10301`/`10304`/`10305`),
 - the effect list from `wonder/devicestatus/v1/userExternal`.
 
-The API is undocumented and may change with a SwitchBot app update.
+The cloud API is undocumented and may change with a SwitchBot app update.
+
+[pySwitchbot]: https://github.com/sblibs/pySwitchbot
 
 ## Caveats
 
@@ -49,7 +64,8 @@ The API is undocumented and may change with a SwitchBot app update.
 - **Account password.** It is stored in the config entry, like the encryption-key login
   of the core SwitchBot integration. If it changes, Home Assistant asks for the new one.
   Accounts that sign in with Apple or Google need a password set in the SwitchBot app.
-- Needs internet; commands take about a second.
+- **Without Bluetooth in range** everything still works, but each command needs
+  internet and takes about a second.
 - The effect list is read when the integration starts. Reload it after adding an
   effect in the app.
 

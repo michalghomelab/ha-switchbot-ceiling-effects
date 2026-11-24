@@ -23,6 +23,7 @@ lamp needs a control the ceiling light doesn't have.
 | `color_off_params` | how the panel calls the power service for the color light only |
 | `speed_min`, `speed_max`, `default_speed` | the speed slider in the panel plugin (`min`, `max`, default value) |
 | `properties` (optional `Properties`) | property IDs to read back from `shadow/getByIDs`, and the `color_mode` value that means "an effect is running" |
+| `ble` (optional `BleProfile`) | the hex commands the lamp takes over Bluetooth, and the pySwitchbot model name; leave it out to always use the cloud |
 | `white` (optional `WhiteLight`) | white brightness / color temperature services, power parameters for the white light only, and the Kelvin range (Matter reports it, if the lamp has Matter) |
 
 ## 1. Log in and find the device type
@@ -107,7 +108,19 @@ the integration polls. A few, such as the effect speed `10307` and the effect st
 `10314`, are only written by the SwitchBot app and stay stale; the raw response has a
 `timestamp` and a `seq` per property, which tells you which ones the lamp updates.
 
-## 6. Add the model
+## 6. Bluetooth commands
+
+`wo<Name>.js` shows the Bluetooth command for every service, which is also what the
+cloud ends up sending. pySwitchbot often has the model already: look in
+`switchbot/devices/` for the command templates (`_set_brightness_command` and friends)
+and in `RGBIC_EFFECTS` for the effect bytes. A lamp needs a `SwitchbotModel` entry and
+an encrypted device class there for the Bluetooth path to work.
+
+The key for the encrypted commands comes from `wonder/keys/v1/communicate`
+(`{"device_mac": ..., "keyType": "user"}`), which the integration reads when you add
+the lamp.
+
+## 7. Add the model
 
 ```python
 STRIP_LIGHT_3 = LampModel(

@@ -13,6 +13,41 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class BleProfile:
+    """
+    Commands a lamp model takes over Bluetooth, as hex templates.
+
+    The same bytes the SwitchBot app sends when the phone is next to the lamp;
+    pySwitchbot encrypts and delivers them. Local control needs no cloud.
+    """
+
+    # pySwitchbot's SwitchbotModel name, e.g. "RGBICWW_CEILING_LIGHT".
+    model: str
+    # Sub-light power. The byte is built by `power_byte()`.
+    power: str
+    color_brightness: str
+    white_brightness: str
+    white_color_temp: str
+    white_brightness_color_temp: str
+    # One effect packet: style low byte, (style high << 4 | color count), packet
+    # index, then up to `colors_per_packet` RGB triplets.
+    effect_packet: str
+    effect_speed: str
+    colors_per_packet: int = 3
+
+
+# Sub-light states inside the power byte.
+BLE_KEEP = 0
+BLE_ON = 1
+BLE_OFF = 2
+
+
+def power_byte(*, white: int, color: int) -> int:
+    """Build the power byte: bit 7 says the states below are meant literally."""
+    return 0x80 | (color << 2) | white
+
+
+@dataclass(frozen=True)
 class Properties:
     """
     Thing-model property IDs the cloud keeps for a lamp.
@@ -72,6 +107,8 @@ class LampModel:
     white: WhiteLight | None = None
     # Properties to read back; leave as None for a lamp that reports nothing.
     properties: Properties | None = None
+    # Bluetooth commands; leave as None to always go through the cloud.
+    ble: BleProfile | None = None
 
 
 # RGBICWW Ceiling Light ("ceilingLight2" in the app, panel plugin CeilingLight2).
@@ -102,6 +139,16 @@ CEILING_LIGHT_2 = LampModel(
         color_brightness=10304,
         color_mode=10305,
         effect_mode=7,  # 2 is a plain color
+    ),
+    ble=BleProfile(
+        model="RGBICWW_CEILING_LIGHT",
+        power="570F490101{:02X}",
+        color_brightness="570F490114{:02X}",
+        white_brightness="570F490109{:02X}",
+        white_color_temp="570F490110{:04X}",
+        white_brightness_color_temp="570F490111{:02X}{:04X}",
+        effect_packet="570F490D01{:02X}{:02X}{:02X}{}",
+        effect_speed="570F490D03{:02X}",
     ),
 )
 

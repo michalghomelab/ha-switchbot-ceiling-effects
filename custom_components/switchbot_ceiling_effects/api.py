@@ -8,15 +8,20 @@ from the SwitchBot app (v10.11) and its React Native panel plugins.
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 import aiohttp
 
+from .models import BLE_KEEP, BLE_OFF, BLE_ON, power_byte
+
 if TYPE_CHECKING:
-    from .models import LampModel
+    from .models import BleProfile, LampModel
+
+_LOGGER = logging.getLogger(__name__)
 
 # Public client ID of the SwitchBot app, also used by pySwitchbot.
 CLIENT_ID = "5nnwmhmsa9xxskm14hd85lm9bm"
@@ -36,6 +41,21 @@ class SwitchBotApiError(Exception):
 
 class SwitchBotAuthError(SwitchBotApiError):
     """Raised when the e-mail or password is rejected."""
+
+
+class SwitchBotBleError(Exception):
+    """Raised when a Bluetooth command fails, so the cloud can take over."""
+
+
+class BleSender(Protocol):
+    """Sends raw commands to a lamp over Bluetooth."""
+
+    @property
+    def available(self) -> bool:
+        """Whether the lamp is in range of a Bluetooth adapter or proxy."""
+
+    async def send(self, commands: list[str]) -> None:
+        """Send hex commands in order, or raise SwitchBotBleError."""
 
 
 @dataclass(frozen=True)
@@ -74,6 +94,20 @@ class Effect:
             f"{c >> 16 & 0xFF}:{c >> 8 & 0xFF}:{c & 0xFF}" for c in self.colors
         )
         return {"0": self.mode, "1": len(self.colors), "2": rgb}
+
+    def ble_packets(self, profile: BleProfile) -> list[str]:
+        """Return the effect as Bluetooth packets, colors split across them."""
+        colors = [f"{c:06X}" for c in self.colors]
+        size = profile.colors_per_packet
+        chunks = [colors[i : i + size] for i in range(0, len(colors), size)]
+        style_low = self.mode & 0xFF
+        style_high_and_count = ((self.mode >> 8 & 0x0F) << 4) | len(colors)
+        return [
+            profile.effect_packet.format(
+                style_low, style_high_and_count, index, "".join(chunk)
+            )
+            for index, chunk in enumerate(chunks)
+        ]
 
 
 def compact_mac(mac: str) -> str:
@@ -220,6 +254,19 @@ class SwitchBotAccount:
                 values[int(key)] = value
         return values
 
+    async def get_ble_key(self, mac: str) -> tuple[str, str]:
+        """Fetch the key that lets this account talk to the lamp over Bluetooth."""
+        data = await self.call(
+            "wonder/keys/v1/communicate",
+            {"device_mac": compact_mac(mac), "keyType": "user"},
+        )
+        key = (data.get("body") or {}).get("communicationKey") or {}
+        key_id, encryption_key = key.get("keyId"), key.get("key")
+        if not key_id or not encryption_key:
+            msg = "the account did not return a Bluetooth key for this lamp"
+            raise SwitchBotApiError(msg)
+        return str(key_id), str(encryption_key)
+
     async def invoke(self, mac: str, service: int, params: dict[str, Any]) -> None:
         """Call one thing-model service on a device."""
         await self.call(
@@ -236,13 +283,43 @@ class SwitchBotAccount:
 
 
 class Lamp:
-    """One lamp: the account, its model profile and its MAC."""
+    """
+    One lamp: the account, its model profile and its MAC.
 
-    def __init__(self, account: SwitchBotAccount, model: LampModel, mac: str) -> None:
+    Commands go over Bluetooth when the lamp is in range of an adapter or
+    proxy, and through the cloud otherwise.
+    """
+
+    def __init__(
+        self,
+        account: SwitchBotAccount,
+        model: LampModel,
+        mac: str,
+        ble: BleSender | None = None,
+    ) -> None:
         """Bind the account to one device."""
         self.account = account
         self.model = model
         self.mac = mac
+        self.ble = ble
+
+    @property
+    def ble_in_use(self) -> bool:
+        """Whether commands are currently going over Bluetooth."""
+        return self.ble is not None and self.ble.available
+
+    async def _send(
+        self, service: int, params: dict[str, Any], ble: list[str] | None = None
+    ) -> None:
+        """Send one command over Bluetooth, falling back to the cloud."""
+        if ble and self.ble is not None and self.ble.available:
+            try:
+                await self.ble.send(ble)
+            except SwitchBotBleError as err:
+                _LOGGER.debug("Bluetooth failed (%s), using the cloud instead", err)
+            else:
+                return
+        await self.account.invoke(self.mac, service, params)
 
     async def get_effects(self, group_id: str) -> list[Effect]:
         """Return the effects available for this lamp."""
@@ -285,19 +362,32 @@ class Lamp:
 
     async def start_effect(self, effect: Effect, speed: int) -> None:
         """Start an effect on the color light at the given speed."""
-        await self.account.invoke(self.mac, self.model.set_effect, effect.params())
+        ble = self.model.ble
+        await self._send(
+            self.model.set_effect,
+            effect.params(),
+            effect.ble_packets(ble) if ble else None,
+        )
         await self.set_speed(speed)
 
     async def set_speed(self, speed: int) -> None:
         """Set the effect speed within the model's range."""
         speed = max(self.model.speed_min, min(self.model.speed_max, speed))
-        await self.account.invoke(self.mac, self.model.set_speed, {"0": speed})
+        ble = self.model.ble
+        await self._send(
+            self.model.set_speed,
+            {"0": speed},
+            [ble.effect_speed.format(speed)] if ble else None,
+        )
 
     async def set_color_brightness(self, brightness: int) -> None:
         """Set the color light brightness, 1-100 %."""
         brightness = max(1, min(100, brightness))
-        await self.account.invoke(
-            self.mac, self.model.set_brightness, {"0": brightness}
+        ble = self.model.ble
+        await self._send(
+            self.model.set_brightness,
+            {"0": brightness},
+            [ble.color_brightness.format(brightness)] if ble else None,
         )
 
     async def set_white(
@@ -312,27 +402,53 @@ class Lamp:
         if white is None:
             msg = f"{self.model.name} has no white light"
             raise SwitchBotApiError(msg)
+        ble = self.model.ble
+
+        params = white.on_params if on else white.off_params
+        state = BLE_ON if on else BLE_OFF
+        await self._send(
+            self.model.set_power,
+            params,
+            [ble.power.format(power_byte(white=state, color=BLE_KEEP))]
+            if ble
+            else None,
+        )
         if not on:
-            await self.account.invoke(self.mac, self.model.set_power, white.off_params)
             return
-        await self.account.invoke(self.mac, self.model.set_power, white.on_params)
+
         if brightness is not None:
             brightness = max(1, min(100, brightness))
         if kelvin is not None:
             kelvin = max(white.min_kelvin, min(white.max_kelvin, kelvin))
+
         if brightness is not None and kelvin is not None:
-            await self.account.invoke(
-                self.mac,
+            await self._send(
                 white.set_brightness_color_temp,
                 {"0": brightness, "1": kelvin},
+                [ble.white_brightness_color_temp.format(brightness, kelvin)]
+                if ble
+                else None,
             )
         elif brightness is not None:
-            await self.account.invoke(self.mac, white.set_brightness, {"0": brightness})
+            await self._send(
+                white.set_brightness,
+                {"0": brightness},
+                [ble.white_brightness.format(brightness)] if ble else None,
+            )
         elif kelvin is not None:
-            await self.account.invoke(self.mac, white.set_color_temp, {"0": kelvin})
+            await self._send(
+                white.set_color_temp,
+                {"0": kelvin},
+                [ble.white_color_temp.format(kelvin)] if ble else None,
+            )
 
     async def turn_off_color_light(self) -> None:
         """Turn the color light off and leave the main white light as it is."""
-        await self.account.invoke(
-            self.mac, self.model.set_power, self.model.color_off_params
+        ble = self.model.ble
+        await self._send(
+            self.model.set_power,
+            self.model.color_off_params,
+            [ble.power.format(power_byte(white=BLE_KEEP, color=BLE_OFF))]
+            if ble
+            else None,
         )

@@ -6,6 +6,7 @@ import asyncio
 import importlib.util
 import pathlib
 import sys
+import types
 from collections.abc import Callable
 from typing import Any, Self
 
@@ -18,12 +19,18 @@ _PKG = (
     / "switchbot_ceiling_effects"
 )
 
+# Load the modules as a package without the real __init__ (it imports Home
+# Assistant), so that their relative imports still resolve.
+_package = types.ModuleType("sb_pkg")
+_package.__path__ = [str(_PKG)]
+sys.modules["sb_pkg"] = _package
+
 
 def _load(name: str) -> Any:
-    """Load a module directly so the package __init__ (Home Assistant) is skipped."""
-    spec = importlib.util.spec_from_file_location(f"sb_{name}", _PKG / f"{name}.py")
+    """Load one module of the integration on its own."""
+    spec = importlib.util.spec_from_file_location(f"sb_pkg.{name}", _PKG / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
-    sys.modules[f"sb_{name}"] = module
+    sys.modules[f"sb_pkg.{name}"] = module
     spec.loader.exec_module(module)
     return module
 
@@ -321,3 +328,82 @@ def test_get_state_without_properties_is_empty() -> None:
     state = asyncio.run(api.Lamp(account, model, "AA").get_state())
     assert state == api.LampState()
     assert session.calls == []
+
+
+class FakeBle:
+    """Stands in for the Bluetooth backend."""
+
+    def __init__(self, *, available: bool = True, fail: bool = False) -> None:
+        self.available = available
+        self.fail = fail
+        self.sent: list[list[str]] = []
+
+    async def send(self, commands: list[str]) -> None:
+        self.sent.append(commands)
+        if self.fail:
+            msg = "no answer"
+            raise api.SwitchBotBleError(msg)
+
+
+def ble_lamp(**kwargs: Any) -> tuple[Any, FakeBle, FakeSession]:
+    account, session = account_with({"func/invoke": (200, INVOKE_OK)})
+    ble = FakeBle(**kwargs)
+    lamp = api.Lamp(account, models.CEILING_LIGHT_2, "AA:11:BB:22:CC:33", ble)
+    return lamp, ble, session
+
+
+def test_effect_as_bluetooth_packets() -> None:
+    effect = api.Effect("Dream", 14, (0xA3E5FF, 0x73F019, 0xFFA8E5))
+    # The same bytes pySwitchbot sends for this effect.
+    assert effect.ble_packets(models.CEILING_LIGHT_2.ble) == [
+        "570F490D010E0300A3E5FF73F019FFA8E5"
+    ]
+
+
+def test_effect_colors_are_split_across_packets() -> None:
+    effect = api.Effect("Rainbow", 22, (0xFF0000, 0x00FF00, 0x0000FF, 0x123456))
+    assert effect.ble_packets(models.CEILING_LIGHT_2.ble) == [
+        "570F490D01160400FF000000FF000000FF",
+        "570F490D01160401123456",
+    ]
+
+
+def test_bluetooth_is_used_before_the_cloud() -> None:
+    lamp, ble, session = ble_lamp()
+    asyncio.run(lamp.set_speed(30))
+    assert ble.sent == [["570F490D031E"]]
+    assert invokes(session) == []
+
+
+def test_cloud_takes_over_when_bluetooth_fails() -> None:
+    lamp, ble, session = ble_lamp(fail=True)
+    asyncio.run(lamp.set_speed(30))
+    assert ble.sent == [["570F490D031E"]]
+    assert invokes(session) == [(10309, {"0": 30})]
+
+
+def test_cloud_is_used_when_the_lamp_is_out_of_range() -> None:
+    lamp, ble, session = ble_lamp(available=False)
+    asyncio.run(lamp.set_color_brightness(22))
+    assert ble.sent == []
+    assert invokes(session) == [(10306, {"0": 22})]
+
+
+def test_white_over_bluetooth_keeps_the_color_light() -> None:
+    lamp, ble, _ = ble_lamp()
+    asyncio.run(lamp.set_white(on=True, brightness=40, kelvin=3000))
+    # 0x81: bit 7 says "literally", white on (1), color light kept (0).
+    assert ble.sent == [["570F49010181"], ["570F490111280BB8"]]
+
+
+def test_turn_off_color_light_over_bluetooth() -> None:
+    lamp, ble, _ = ble_lamp()
+    asyncio.run(lamp.turn_off_color_light())
+    # 0x88: color light off (2 << 2), white light kept.
+    assert ble.sent == [["570F49010188"]]
+
+
+def test_start_effect_sends_colors_then_speed_over_bluetooth() -> None:
+    lamp, ble, _ = ble_lamp()
+    asyncio.run(lamp.start_effect(api.Effect("Dream", 14, (0xA3E5FF,)), 250))
+    assert ble.sent == [["570F490D010E0100A3E5FF"], ["570F490D03FA"]]

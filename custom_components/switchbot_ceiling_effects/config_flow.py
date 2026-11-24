@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
@@ -15,11 +16,19 @@ from homeassistant.helpers.selector import (
 )
 
 from .api import Device, SwitchBotAccount, SwitchBotApiError, SwitchBotAuthError
-from .const import CONF_DEVICE_TYPE, CONF_GROUP_ID, DOMAIN
+from .const import (
+    CONF_BLE_KEY,
+    CONF_BLE_KEY_ID,
+    CONF_DEVICE_TYPE,
+    CONF_GROUP_ID,
+    DOMAIN,
+)
 from .models import MODELS
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+_LOGGER = logging.getLogger(__name__)
 
 PASSWORD_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 USER_SCHEMA = vol.Schema(
@@ -41,14 +50,17 @@ class CeilingEffectsConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the flow."""
         self._credentials: dict[str, str] = {}
         self._lamps: dict[str, Device] = {}
+        self._account: SwitchBotAccount | None = None
 
     async def _login(
         self, email: str, password: str
     ) -> tuple[list[Device], dict[str, str]]:
         """Log in and list the supported lamps; return (lamps, errors)."""
-        account = SwitchBotAccount(async_get_clientsession(self.hass), email, password)
+        self._account = SwitchBotAccount(
+            async_get_clientsession(self.hass), email, password
+        )
         try:
-            devices = await account.get_devices()
+            devices = await self._account.get_devices()
         except SwitchBotAuthError:
             return [], {"base": "invalid_auth"}
         except SwitchBotApiError:
@@ -95,6 +107,18 @@ class CeilingEffectsConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(mac)
         self._abort_if_unique_id_configured()
         lamp = self._lamps[mac]
+
+        # The Bluetooth key lets the integration control the lamp locally. It is
+        # read once here; without it everything still works through the cloud.
+        keys: dict[str, str] = {}
+        if self._account is not None:
+            try:
+                key_id, key = await self._account.get_ble_key(mac)
+            except SwitchBotApiError:
+                _LOGGER.info("No Bluetooth key for %s; using the cloud only", lamp.name)
+            else:
+                keys = {CONF_BLE_KEY_ID: key_id, CONF_BLE_KEY: key}
+
         return self.async_create_entry(
             title=lamp.name,
             data={
@@ -103,6 +127,7 @@ class CeilingEffectsConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_DEVICE_TYPE: lamp.device_type,
                 CONF_GROUP_ID: lamp.group_id,
                 CONF_NAME: lamp.name,
+                **keys,
             },
         )
 
