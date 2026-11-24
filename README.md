@@ -11,9 +11,13 @@ the main white light through the same account.
 | `number.<lamp>_effect_brightness` | color light brightness, 1–100 % |
 | `light.<lamp>_white_light` | main white light: on/off, brightness, color temperature 2700–6500 K |
 
-The white light is also available over Matter, which is local and reports the real
-state. Use whichever you prefer; the cloud entity is handy when the lamp is not paired
-over Matter or you want everything in one device.
+The lamp reports its state to the SwitchBot cloud, and this integration reads it back
+every 30 seconds and right after each command. Changes made anywhere, in the SwitchBot
+app, over Matter or with a wall switch, show up in Home Assistant.
+
+The white light is also available over Matter, which is local and updates instantly.
+Use whichever you prefer; the cloud entity is handy when the lamp is not paired over
+Matter or you want everything in one device.
 
 ## How it works
 
@@ -26,19 +30,22 @@ app**, the same calls the app's lamp screen makes:
 - `command/cmd/api/v1/func/invoke` with the lamp's "thing model" services
   (effect colors `10310`, speed `10309`, brightness `10306`, power `10301`,
   white brightness `10302`, color temperature `10303`, both `10304`),
+- the state from `device/device/v1/shadow/getByIDs` (white `10300`/`10302`/`10303`,
+  color light `10301`/`10304`/`10305`),
 - the effect list from `wonder/devicestatus/v1/userExternal`.
 
 The API is undocumented and may change with a SwitchBot app update.
 
 ## Caveats
 
-- **Write-only.** The entities show the last value sent from Home Assistant (restored
-  after a restart). Changes made in the SwitchBot app are not reflected.
+- **Two values are not reported by the lamp:** the effect speed, and which effect is
+  running. The speed slider shows what was last sent (restored after a restart), and the
+  effect selector shows the running effect only when Home Assistant started it. An effect
+  started in the SwitchBot app makes it `unknown`; the lamp only says that *some* effect
+  is running.
 - **Effects never touch the white light.** Turning the effect off sends "keep" for the
   white light and "off" for the color light, and the white light entity sends "keep"
   for the color light.
-- **The white light state is assumed.** The cloud does not report it reliably (it misses
-  changes made over Matter), so the entity shows what Home Assistant last sent.
 - **Account password.** It is stored in the config entry, like the encryption-key login
   of the core SwitchBot integration. If it changes, Home Assistant asks for the new one.
   Accounts that sign in with Apple or Google need a password set in the SwitchBot app.

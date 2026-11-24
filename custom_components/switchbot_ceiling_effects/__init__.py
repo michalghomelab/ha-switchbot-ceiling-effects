@@ -2,31 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_DEVICE_ID, CONF_EMAIL, CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant  # noqa: TC002
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import Effect, Lamp, SwitchBotAccount, SwitchBotApiError, SwitchBotAuthError
+from .api import Lamp, SwitchBotAccount, SwitchBotApiError, SwitchBotAuthError
 from .const import CONF_DEVICE_TYPE, CONF_GROUP_ID
+from .coordinator import CeilingCoordinator
 from .models import MODELS
 
 PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SELECT]
 
-
-@dataclass
-class LampData:
-    """Shared state of one lamp (one config entry)."""
-
-    lamp: Lamp
-    effects: dict[str, Effect]
-    speed: int
-
-
-type CeilingEffectsConfigEntry = ConfigEntry[LampData]
+type CeilingEffectsConfigEntry = ConfigEntry[CeilingCoordinator]
 
 
 async def async_setup_entry(
@@ -49,9 +38,10 @@ async def async_setup_entry(
     except SwitchBotApiError as err:
         raise ConfigEntryNotReady(str(err)) from err
 
-    entry.runtime_data = LampData(
-        lamp, {e.name: e for e in effects}, model.default_speed
-    )
+    coordinator = CeilingCoordinator(hass, entry, lamp, effects)
+    await coordinator.async_config_entry_first_refresh()
+    entry.runtime_data = coordinator
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

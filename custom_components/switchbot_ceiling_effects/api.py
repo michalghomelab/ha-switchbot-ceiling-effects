@@ -49,6 +49,18 @@ class Device:
 
 
 @dataclass(frozen=True)
+class LampState:
+    """What the lamp reports to the cloud. A field is None when unknown."""
+
+    white_on: bool | None = None
+    white_brightness: int | None = None  # 1-100 %
+    white_kelvin: int | None = None
+    color_on: bool | None = None
+    color_brightness: int | None = None  # 1-100 %
+    effect_running: bool | None = None
+
+
+@dataclass(frozen=True)
 class Effect:
     """A preset or custom effect as stored in the SwitchBot account."""
 
@@ -194,6 +206,20 @@ class SwitchBotAccount:
             effects.append(Effect(name, int(item["mode"]), colors))
         return effects
 
+    async def get_properties(self, mac: str, ids: list[int]) -> dict[int, Any]:
+        """Read thing-model properties the lamp reports to the cloud."""
+        data = await self.call(
+            "device/device/v1/shadow/getByIDs",
+            {"deviceID": compact_mac(mac), "propertyIDs": ids},
+        )
+        shadow = data.get("data") or {}
+        values: dict[int, Any] = {}
+        for key, prop in shadow.items():
+            value = (prop or {}).get("value")
+            if value is not None:
+                values[int(key)] = value
+        return values
+
     async def invoke(self, mac: str, service: int, params: dict[str, Any]) -> None:
         """Call one thing-model service on a device."""
         await self.call(
@@ -222,6 +248,39 @@ class Lamp:
         """Return the effects available for this lamp."""
         return await self.account.get_effects(
             self.mac, group_id, self.model.effect_list_action
+        )
+
+    async def get_state(self) -> LampState:
+        """Read back what the lamp currently reports."""
+        props = self.model.properties
+        if props is None:
+            return LampState()
+        ids = [
+            props.white_power,
+            props.white_brightness,
+            props.white_kelvin,
+            props.color_power,
+            props.color_brightness,
+            props.color_mode,
+        ]
+        values = await self.account.get_properties(self.mac, ids)
+
+        def flag(prop: int) -> bool | None:
+            value = values.get(prop)
+            return None if value is None else bool(value)
+
+        def number(prop: int) -> int | None:
+            value = values.get(prop)
+            return int(value) if isinstance(value, (int, float)) else None
+
+        mode = number(props.color_mode)
+        return LampState(
+            white_on=flag(props.white_power),
+            white_brightness=number(props.white_brightness),
+            white_kelvin=number(props.white_kelvin),
+            color_on=flag(props.color_power),
+            color_brightness=number(props.color_brightness),
+            effect_running=None if mode is None else mode == props.effect_mode,
         )
 
     async def start_effect(self, effect: Effect, speed: int) -> None:

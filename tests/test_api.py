@@ -263,3 +263,61 @@ def test_model_without_white_light_refuses() -> None:
     with pytest.raises(api.SwitchBotApiError, match="no white light"):
         asyncio.run(lamp.set_white(on=True))
     assert session.calls == []
+
+
+SHADOW_OK = {
+    "resultCode": 100,
+    "data": {
+        "10300": {"id": 10300, "value": 1},
+        "10301": {"id": 10301, "value": 0},
+        "10302": {"id": 10302, "value": 83},
+        "10303": {"id": 10303, "value": 3984},
+        "10304": {"id": 10304, "value": 100},
+        "10305": {"id": 10305, "value": 7},
+    },
+}
+
+
+def test_get_state_reads_what_the_lamp_reports() -> None:
+    lamp, session = lamp_with({"shadow/getByIDs": (200, SHADOW_OK)})
+    state = asyncio.run(lamp.get_state())
+    assert state == api.LampState(
+        white_on=True,
+        white_brightness=83,
+        white_kelvin=3984,
+        color_on=False,
+        color_brightness=100,
+        effect_running=True,
+    )
+    request = session.calls[-1]["json"]
+    assert request["deviceID"] == "AA11BB22CC33"
+    assert sorted(request["propertyIDs"]) == [10300, 10301, 10302, 10303, 10304, 10305]
+    assert "requestID" not in request
+
+
+def test_get_state_keeps_unknown_values_as_none() -> None:
+    shadow = {
+        "resultCode": 100,
+        "data": {"10300": {"value": None}, "10305": {"value": 2}},
+    }
+    lamp, _ = lamp_with({"shadow/getByIDs": (200, shadow)})
+    state = asyncio.run(lamp.get_state())
+    assert state.white_on is None
+    assert state.white_brightness is None
+    assert state.effect_running is False  # a plain color, not an effect
+
+
+def test_get_state_without_properties_is_empty() -> None:
+    model = models.LampModel(
+        device_type="X",
+        name="No readback",
+        effect_list_action="a",
+        set_effect=1,
+        set_speed=2,
+        set_brightness=3,
+        set_power=4,
+    )
+    account, session = account_with({})
+    state = asyncio.run(api.Lamp(account, model, "AA").get_state())
+    assert state == api.LampState()
+    assert session.calls == []

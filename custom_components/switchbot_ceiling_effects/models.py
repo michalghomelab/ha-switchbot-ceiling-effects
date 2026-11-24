@@ -13,6 +13,26 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class Properties:
+    """
+    Thing-model property IDs the cloud keeps for a lamp.
+
+    The lamp itself reports these, so they follow changes made anywhere,
+    including over Matter or with a wall switch. Read them through
+    `device/device/v1/shadow/getByIDs`.
+    """
+
+    white_power: int
+    white_brightness: int
+    white_kelvin: int
+    color_power: int
+    color_brightness: int
+    color_mode: int
+    # Value of `color_mode` that means an effect is running.
+    effect_mode: int
+
+
+@dataclass(frozen=True)
 class WhiteLight:
     """Services of a lamp's main white light."""
 
@@ -50,6 +70,8 @@ class LampModel:
     default_speed: int = 153
     # Main white light; leave `white` as None for lamps without one.
     white: WhiteLight | None = None
+    # Properties to read back; leave as None for a lamp that reports nothing.
+    properties: Properties | None = None
 
 
 # RGBICWW Ceiling Light ("ceilingLight2" in the app, panel plugin CeilingLight2).
@@ -71,6 +93,15 @@ CEILING_LIGHT_2 = LampModel(
         # Matter reports 2702-6535 K for this lamp.
         min_kelvin=2700,
         max_kelvin=6500,
+    ),
+    properties=Properties(
+        white_power=10300,
+        white_brightness=10302,
+        white_kelvin=10303,
+        color_power=10301,
+        color_brightness=10304,
+        color_mode=10305,
+        effect_mode=7,  # 2 is a plain color
     ),
 )
 

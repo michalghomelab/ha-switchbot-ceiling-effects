@@ -22,6 +22,7 @@ lamp needs a control the ceiling light doesn't have.
 | `set_effect`, `set_speed`, `set_brightness`, `set_power` | service IDs (`PMLightService` or similar) in the panel plugin |
 | `color_off_params` | how the panel calls the power service for the color light only |
 | `speed_min`, `speed_max`, `default_speed` | the speed slider in the panel plugin (`min`, `max`, default value) |
+| `properties` (optional `Properties`) | property IDs to read back from `shadow/getByIDs`, and the `color_mode` value that means "an effect is running" |
 | `white` (optional `WhiteLight`) | white brightness / color temperature services, power parameters for the white light only, and the Kelvin range (Matter reports it, if the lamp has Matter) |
 
 ## 1. Log in and find the device type
@@ -100,8 +101,11 @@ python3 tools/sbapp.py invoke AA11BB22CC33 10309 '{"0": 30}'
 
 `resultCode 100` means the cloud accepted the command. The lamp's own result comes back
 over MQTT, which the script doesn't read, so look at the lamp to see what happened.
-`shadow` reads the stored properties (e.g. `10301` color light on/off), but some values,
-such as the speed, are only updated by the app and may be stale.
+`shadow` reads the properties the lamp reports to the cloud. Most of them follow the
+real lamp, including changes made over Matter or with a wall switch, and this is what
+the integration polls. A few, such as the effect speed `10307` and the effect style
+`10314`, are only written by the SwitchBot app and stay stale; the raw response has a
+`timestamp` and a `seq` per property, which tells you which ones the lamp updates.
 
 ## 6. Add the model
 
