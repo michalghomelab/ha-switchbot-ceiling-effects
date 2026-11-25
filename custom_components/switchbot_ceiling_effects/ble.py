@@ -8,7 +8,6 @@ proxy in range, so this works without the SwitchBot cloud.
 from __future__ import annotations
 
 import logging
-import time
 from typing import TYPE_CHECKING
 
 from homeassistant.components import bluetooth
@@ -36,10 +35,6 @@ DEVICE_CLASSES: dict[str, type[SwitchbotEncryptedDevice]] = {
     "RGBICWW_CEILING_LIGHT": SwitchbotRgbicwwCeilingLight,
 }
 
-# How often to report an advertisement that carried no state. The lamp
-# broadcasts every few seconds, so every one of them would flood the log.
-UNREADABLE_INTERVAL = 60
-
 
 class BleBackend:
     """Talks to one lamp over Bluetooth, if it is in range."""
@@ -59,7 +54,6 @@ class BleBackend:
         self._key_id = key_id
         self._encryption_key = encryption_key
         self._device_class = DEVICE_CLASSES.get(profile.model)
-        self._unreadable_logged = 0.0
 
     def _ble_device(self) -> BLEDevice | None:
         """Return the lamp as an adapter or proxy that can connect to it sees it."""
@@ -87,46 +81,19 @@ class BleBackend:
                 service_info.advertisement,
                 SwitchbotModel[self._profile.model],
             )
+            # A lamp with both its lights off broadcasts fewer bytes than
+            # pySwitchbot needs, and parses to nothing; the cloud then has
+            # the state, and the first broadcast after it lights up again
+            # brings it back.
             data = (parsed.data.get("data") if parsed else None) or {}
             if data:
                 on_state(state_from_advertisement(data, props))
-            else:
-                self._report_unreadable(service_info, parsed)
 
         return bluetooth.async_register_callback(
             self._hass,
             _advertisement,
             bluetooth.BluetoothCallbackMatcher(address=self._address),
             bluetooth.BluetoothScanningMode.PASSIVE,
-        )
-
-    def _report_unreadable(
-        self,
-        service_info: bluetooth.BluetoothServiceInfoBleak,
-        parsed: object | None,
-    ) -> None:
-        """
-        Report an advertisement that carried no state, now and then.
-
-        pySwitchbot needs manufacturer data of a certain length, and it
-        recognizes the model from the advertisement before it considers the
-        model given to it, so the raw bytes say which of the two went wrong.
-        """
-        now = time.monotonic()
-        if now - self._unreadable_logged < UNREADABLE_INTERVAL:
-            return
-        self._unreadable_logged = now
-        advertisement = service_info.advertisement
-        _LOGGER.debug(
-            "No state in the advertisement of %s: pySwitchbot read it as %s, "
-            "service data %s, manufacturer data %s",
-            self._address,
-            getattr(parsed, "data", {}).get("model") if parsed else None,
-            {uuid: value.hex() for uuid, value in advertisement.service_data.items()},
-            {
-                mfr_id: value.hex()
-                for mfr_id, value in advertisement.manufacturer_data.items()
-            },
         )
 
     async def send(self, commands: list[str]) -> None:
